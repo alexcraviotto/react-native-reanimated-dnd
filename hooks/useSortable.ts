@@ -3,9 +3,7 @@ import { StyleProp, ViewStyle } from "react-native";
 import React from "react";
 import Animated, {
   runOnJS,
-  runOnUI,
   SharedValue,
-  useAnimatedGestureHandler,
   useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
@@ -13,7 +11,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { PanGestureHandlerGestureEvent } from "react-native-gesture-handler";
+import { Gesture, GestureType } from "react-native-gesture-handler";
 
 export enum ScrollDirection {
   None = "none",
@@ -139,7 +137,7 @@ export interface UseSortableOptions<T> {
 
 export interface UseSortableReturn {
   animatedStyle: StyleProp<ViewStyle>;
-  panGestureHandler: any;
+  panGestureHandler: GestureType;
   isMoving: boolean;
   hasHandle: boolean;
 }
@@ -321,9 +319,10 @@ export function useSortable<T>(
           return true;
         }
 
-        if (child.props && child.props.children) {
+        const props = child.props as { children?: React.ReactNode };
+        if (child.props && props.children) {
           if (
-            React.Children.toArray(child.props.children).some(checkForHandle)
+            React.Children.toArray(props.children).some(checkForHandle)
           ) {
             return true;
           }
@@ -466,34 +465,34 @@ export function useSortable<T>(
     [movingSV]
   );
 
-  type GestureContext = Record<string, number>;
+  const initialItemContentY = useSharedValue(0);
+  const initialFingerAbsoluteY = useSharedValue(0);
+  const initialLowerBound = useSharedValue(0);
 
-  const panGestureHandler = useAnimatedGestureHandler<
-    PanGestureHandlerGestureEvent,
-    GestureContext
-  >({
-    onStart(event, ctx) {
+  const panGestureHandler = Gesture.Pan()
+    .activateAfterLongPress(200)
+    .onStart((event) => {
       "worklet";
-      ctx.initialItemContentY = positions.value[id] * itemHeight;
-      ctx.initialFingerAbsoluteY = event.absoluteY;
-      ctx.initialLowerBound = lowerBound.value;
+      initialItemContentY.value = positions.value[id] * itemHeight;
+      initialFingerAbsoluteY.value = event.absoluteY;
+      initialLowerBound.value = lowerBound.value;
 
-      positionY.value = ctx.initialItemContentY;
+      positionY.value = initialItemContentY.value;
       movingSV.value = true;
       runOnJS(setIsMoving)(true);
 
       if (onDragStart) {
         runOnJS(onDragStart)(id, positions.value[id]);
       }
-    },
-    onActive(event, ctx) {
+    })
+    .onUpdate((event) => {
       "worklet";
-      const fingerDyScreen = event.absoluteY - ctx.initialFingerAbsoluteY;
-      const scrollDeltaSinceStart = lowerBound.value - ctx.initialLowerBound;
+      const fingerDyScreen = event.absoluteY - initialFingerAbsoluteY.value;
+      const scrollDeltaSinceStart = lowerBound.value - initialLowerBound.value;
       positionY.value =
-        ctx.initialItemContentY + fingerDyScreen + scrollDeltaSinceStart;
-    },
-    onFinish() {
+        initialItemContentY.value + fingerDyScreen + scrollDeltaSinceStart;
+    })
+    .onEnd(() => {
       "worklet";
       const finishPosition = positions.value[id] * itemHeight;
       top.value = withTiming(finishPosition);
@@ -506,8 +505,7 @@ export function useSortable<T>(
       }
 
       currentOverItemId.value = null;
-    },
-  });
+    });
 
   const animatedStyle = useAnimatedStyle(() => {
     "worklet";

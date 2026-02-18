@@ -1,7 +1,7 @@
 import React, { createContext, useContext } from "react";
 import { StyleProp, ViewStyle } from "react-native";
 import Animated from "react-native-reanimated";
-import { PanGestureHandler } from "react-native-gesture-handler";
+import { GestureDetector } from "react-native-gesture-handler";
 import { useSortable } from "../hooks/useSortable";
 import { useHorizontalSortable } from "../hooks/useHorizontalSortable";
 import {
@@ -65,9 +65,9 @@ const SortableHandle = ({ children, style }: SortableHandleProps) => {
   }
 
   return (
-    <PanGestureHandler onGestureEvent={sortableContext.panGestureHandler}>
+    <GestureDetector gesture={sortableContext.panGestureHandler}>
       <Animated.View style={style}>{children}</Animated.View>
-    </PanGestureHandler>
+    </GestureDetector>
   );
 };
 
@@ -231,13 +231,9 @@ export function SortableItem<T>({
       return content;
     } else {
       return (
-        <PanGestureHandler
-          onGestureEvent={horizontalPanGestureHandler}
-          activateAfterLongPress={200}
-          shouldCancelWhenOutside={false}
-        >
+        <GestureDetector gesture={horizontalPanGestureHandler}>
           {content}
-        </PanGestureHandler>
+        </GestureDetector>
       );
     }
   }
@@ -289,13 +285,9 @@ export function SortableItem<T>({
     return content;
   } else {
     return (
-      <PanGestureHandler
-        onGestureEvent={verticalPanGestureHandler}
-        activateAfterLongPress={200}
-        shouldCancelWhenOutside={false}
-      >
+      <GestureDetector gesture={verticalPanGestureHandler}>
         {content}
-      </PanGestureHandler>
+      </GestureDetector>
     );
   }
 }

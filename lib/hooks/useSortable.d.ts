@@ -1,6 +1,7 @@
 import { StyleProp, ViewStyle } from "react-native";
 import React from "react";
 import { SharedValue } from "react-native-reanimated";
+import { GestureType } from "react-native-gesture-handler";
 export declare enum ScrollDirection {
     None = "none",
     Up = "up",
@@ -42,7 +43,7 @@ export interface UseSortableOptions<T> {
 }
 export interface UseSortableReturn {
     animatedStyle: StyleProp<ViewStyle>;
-    panGestureHandler: any;
+    panGestureHandler: GestureType;
     isMoving: boolean;
     hasHandle: boolean;
 }

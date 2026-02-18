@@ -2,8 +2,6 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import React from "react";
 import Animated, {
   runOnJS,
-  runOnUI,
-  useAnimatedGestureHandler,
   useAnimatedReaction,
   useAnimatedStyle,
   useDerivedValue,
@@ -11,7 +9,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { PanGestureHandlerGestureEvent } from "react-native-gesture-handler";
+import { Gesture, GestureType } from "react-native-gesture-handler";
 import {
   setHorizontalPosition,
   setHorizontalAutoScroll,
@@ -371,39 +369,39 @@ export function useHorizontalSortable<T>(
     [movingSV]
   );
 
-  type GestureContext = Record<string, number>;
+  const initialItemContentX = useSharedValue(0);
+  const initialFingerAbsoluteX = useSharedValue(0);
+  const initialLeftBound = useSharedValue(0);
 
-  const panGestureHandler = useAnimatedGestureHandler<
-    PanGestureHandlerGestureEvent,
-    GestureContext
-  >({
-    onStart(event, ctx) {
+  const panGestureHandler: GestureType = Gesture.Pan()
+    .activateAfterLongPress(200)
+    .onStart((event) => {
       "worklet";
-      ctx.initialItemContentX = getItemXPosition(
+      initialItemContentX.value = getItemXPosition(
         positions.value[id],
         itemWidth,
         gap,
         paddingHorizontal
       );
-      ctx.initialFingerAbsoluteX = event.absoluteX;
-      ctx.initialLeftBound = leftBound.value;
+      initialFingerAbsoluteX.value = event.absoluteX;
+      initialLeftBound.value = leftBound.value;
 
-      positionX.value = ctx.initialItemContentX;
+      positionX.value = initialItemContentX.value;
       movingSV.value = true;
       runOnJS(setIsMoving)(true);
 
       if (onDragStart) {
         runOnJS(onDragStart)(id, positions.value[id]);
       }
-    },
-    onActive(event, ctx) {
+    })
+    .onUpdate((event) => {
       "worklet";
-      const fingerDxScreen = event.absoluteX - ctx.initialFingerAbsoluteX;
-      const scrollDeltaSinceStart = leftBound.value - ctx.initialLeftBound;
+      const fingerDxScreen = event.absoluteX - initialFingerAbsoluteX.value;
+      const scrollDeltaSinceStart = leftBound.value - initialLeftBound.value;
       positionX.value =
-        ctx.initialItemContentX + fingerDxScreen + scrollDeltaSinceStart;
-    },
-    onFinish() {
+        initialItemContentX.value + fingerDxScreen + scrollDeltaSinceStart;
+    })
+    .onEnd(() => {
       "worklet";
       const finishPosition = getItemXPosition(
         positions.value[id],
@@ -421,8 +419,7 @@ export function useHorizontalSortable<T>(
       }
 
       currentOverItemId.value = null;
-    },
-  });
+    });
 
   const animatedStyle = useAnimatedStyle(() => {
     "worklet";
