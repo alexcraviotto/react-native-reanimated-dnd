@@ -469,7 +469,11 @@ export const useDraggable = <TData = unknown>(
 
       if (hitSlotData && hitSlotId !== null) {
         if (hitSlotData.onDrop) {
-          runOnJS(hitSlotData.onDrop)(draggableData);
+          // We need to run the onDrop callback on the UI to avoid crashes with Expo 54 (react-native-reanimated v4)
+          runOnUI(() => {
+            "worklet";
+            hitSlotData.onDrop(draggableData);
+          })();
         }
 
         runOnJS(registerDroppedItem)(
