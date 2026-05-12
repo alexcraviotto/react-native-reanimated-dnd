@@ -571,6 +571,16 @@ export interface SortableItemProps<T> {
     overItemId: string | null,
     xPosition: number
   ) => void;
+
+  /**
+   * When true, the spring animation that runs when items reposition at rest
+   * (e.g. after height/position changes outside of a drag) is skipped and the
+   * item snaps to its new top instantly. The drag-time animations (during
+   * dragging and the drop-finish timing) are unaffected.
+   *
+   * @default false
+   */
+  disableLayoutAnimation?: boolean;
 }
 
 /**
@@ -630,6 +640,16 @@ export interface SortableProps<TData extends SortableData> {
    * @default true
    */
   useFlatList?: boolean;
+
+  /**
+   * Forwarded to each SortableItem. When true, the spring animation that runs
+   * when items reposition at rest is skipped so the item snaps instantly.
+   * Drag-time animations (during dragging and the drop-finish timing) are
+   * unaffected.
+   *
+   * @default false
+   */
+  disableLayoutAnimation?: boolean;
 }
 
 /**
@@ -695,6 +715,9 @@ export interface SortableRenderItemProps<TData extends SortableData> {
 
   /** Function to schedule height updates (dynamic heights only) */
   scheduleHeightUpdate?: (id: string, height: number) => void;
+
+  /** Forwarded from Sortable to skip the resting reposition spring animation. */
+  disableLayoutAnimation?: boolean;
 }
 
 export interface SortableContextValue {

@@ -137,6 +137,15 @@ export interface UseSortableOptions<T> {
     overItemId: string | null,
     yPosition: number
   ) => void;
+  /**
+   * When true, the spring animation that runs when items reposition at rest
+   * (e.g. after height/position changes outside of a drag) is skipped and the
+   * item snaps to its new top instantly. The drag-time animations (during
+   * dragging and the drop-finish timing) are unaffected.
+   *
+   * @default false
+   */
+  disableLayoutAnimation?: boolean;
 }
 
 export interface UseSortableReturn {
@@ -182,6 +191,7 @@ export function useSortable<T>(
     onDragStart,
     onDrop,
     onDragging,
+    disableLayoutAnimation = false,
   } = options;
 
   // Effective item height for fixed mode calculations
@@ -236,10 +246,10 @@ export function useSortable<T>(
     },
     (newTop, oldTop) => {
       if (oldTop !== null && newTop !== oldTop && !movingSV.value) {
-        top.value = withSpring(newTop);
+        top.value = disableLayoutAnimation ? newTop : withSpring(newTop);
       }
     },
-    [isDynamicHeight, itemHeights, positions, id, effectiveItemHeight, estimatedItemHeight, movingSV]
+    [isDynamicHeight, itemHeights, positions, id, effectiveItemHeight, estimatedItemHeight, movingSV, disableLayoutAnimation]
   );
 
   // === Position change callback (onMove) ===

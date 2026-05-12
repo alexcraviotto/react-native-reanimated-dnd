@@ -5,7 +5,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # Build output
-lib/
+# lib/ is committed so the package can be installed directly from GitHub
 dist/
 build/
 

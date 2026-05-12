@@ -52,6 +52,7 @@ function SortableComponent<TData extends { id: string }>({
   contentContainerStyle,
   itemKeyExtractor = (item) => item.id,
   useFlatList = true,
+  disableLayoutAnimation,
 }: SortableProps<TData>) {
   // Determine if dynamic height mode applies
   const isDynamicHeightMode = useMemo(() => {
@@ -89,6 +90,7 @@ function SortableComponent<TData extends { id: string }>({
         contentContainerStyle={contentContainerStyle}
         itemKeyExtractor={itemKeyExtractor}
         useFlatList={useFlatList}
+        disableLayoutAnimation={disableLayoutAnimation}
       />
     );
   }
@@ -106,6 +108,7 @@ function SortableComponent<TData extends { id: string }>({
       contentContainerStyle={contentContainerStyle}
       itemKeyExtractor={itemKeyExtractor}
       useFlatList={useFlatList}
+      disableLayoutAnimation={disableLayoutAnimation}
     />
   );
 }
@@ -122,6 +125,7 @@ function VerticalSortableContent<TData extends { id: string }>({
   contentContainerStyle,
   itemKeyExtractor,
   useFlatList,
+  disableLayoutAnimation,
 }: SortableProps<TData>) {
   const {
     scrollViewRef,
@@ -146,6 +150,7 @@ function VerticalSortableContent<TData extends { id: string }>({
         item: item as TData,
         index,
         direction: SortableDirection.Vertical,
+        disableLayoutAnimation,
         ...itemProps,
       };
       return renderItem(sortableItemProps) as React.ReactElement;
@@ -194,6 +199,7 @@ function VerticalSortableContent<TData extends { id: string }>({
                 item,
                 index,
                 direction: SortableDirection.Vertical,
+                disableLayoutAnimation,
                 ...itemProps,
               };
               return renderItem(sortableItemProps);
@@ -216,6 +222,7 @@ function HorizontalSortableContent<TData extends { id: string }>({
   contentContainerStyle,
   itemKeyExtractor,
   useFlatList,
+  disableLayoutAnimation,
 }: SortableProps<TData>) {
   const {
     scrollViewRef,
@@ -240,6 +247,7 @@ function HorizontalSortableContent<TData extends { id: string }>({
         index,
         direction: SortableDirection.Horizontal,
         autoScrollHorizontalDirection: itemProps.autoScrollDirection,
+        disableLayoutAnimation,
         ...itemProps,
       };
       return renderItem(sortableItemProps) as React.ReactElement;
@@ -292,6 +300,7 @@ function HorizontalSortableContent<TData extends { id: string }>({
                 index,
                 direction: SortableDirection.Horizontal,
                 autoScrollHorizontalDirection: itemProps.autoScrollDirection,
+                disableLayoutAnimation,
                 ...itemProps,
               };
               return renderItem(sortableItemProps);
