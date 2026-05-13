@@ -35,6 +35,8 @@ export interface UseSortableOptions<T> {
     itemHeights?: SharedValue<{
         [id: string]: number;
     }>;
+    naturalIndex?: number;
+    dataIds?: SharedValue<string[]>;
     onMove?: (id: string, from: number, to: number) => void;
     onDragStart?: (id: string, position: number) => void;
     onDrop?: (id: string, position: number, allPositions?: {
@@ -123,6 +125,8 @@ export interface SortableItemProps<T> {
     }) => void;
     onDragging?: (id: string, overItemId: string | null, yPosition: number) => void;
     onDraggingHorizontal?: (id: string, overItemId: string | null, xPosition: number) => void;
+    naturalIndex?: number;
+    dataIds?: SharedValue<string[]>;
     disableLayoutAnimation?: boolean;
 }
 export interface SortableProps<TData extends SortableData> {

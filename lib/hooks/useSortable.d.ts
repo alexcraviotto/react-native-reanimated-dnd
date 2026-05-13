@@ -42,6 +42,8 @@ export interface UseSortableOptions<T> {
         [id: string]: number;
     }) => void;
     onDragging?: (id: string, overItemId: string | null, yPosition: number) => void;
+    naturalIndex?: number;
+    dataIds?: SharedValue<string[]>;
     disableLayoutAnimation?: boolean;
 }
 export interface UseSortableReturn {

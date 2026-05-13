@@ -130,6 +130,20 @@ export interface UseSortableOptions<T> {
   itemHeights?: SharedValue<{ [id: string]: number }>;
 
   /**
+   * Item's natural index in the data array. When provided alongside `dataIds`,
+   * the item renders with `transform: translateY` in normal flex flow instead of
+   * `position: absolute`. Avoids overlap with siblings outside the list when
+   * content above/below changes height.
+   */
+  naturalIndex?: number;
+
+  /**
+   * SharedValue with the data IDs in their natural order. Required for
+   * `naturalIndex` mode with dynamic heights.
+   */
+  dataIds?: SharedValue<string[]>;
+
+  /**
    * Callback fired when an item's position changes within the list.
    * This is called for both the moved item and any items that were displaced.
    *
@@ -571,6 +585,12 @@ export interface SortableItemProps<T> {
     overItemId: string | null,
     xPosition: number
   ) => void;
+
+  /** Natural index of this item in the data array (forwarded to useSortable). */
+  naturalIndex?: number;
+
+  /** Data IDs in their natural order (forwarded to useSortable). */
+  dataIds?: SharedValue<string[]>;
 
   /**
    * When true, the spring animation that runs when items reposition at rest

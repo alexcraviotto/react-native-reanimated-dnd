@@ -138,6 +138,20 @@ export interface UseSortableOptions<T> {
     yPosition: number
   ) => void;
   /**
+   * The natural index of this item in the data array (data[naturalIndex] === this item).
+   * When provided alongside `dataIds`, the item is rendered with `transform: translateY`
+   * in normal flex flow instead of `position: absolute`. This avoids visual overlap
+   * issues when sibling content above the list expands/collapses.
+   *
+   * If omitted, the legacy absolute-positioning mode is used.
+   */
+  naturalIndex?: number;
+  /**
+   * SharedValue containing the item IDs in their natural data order.
+   * Required when using `naturalIndex` mode for dynamic heights.
+   */
+  dataIds?: SharedValue<string[]>;
+  /**
    * When true, the spring animation that runs when items reposition at rest
    * (e.g. after height/position changes outside of a drag) is skipped and the
    * item snaps to its new top instantly. The drag-time animations (during
@@ -191,8 +205,14 @@ export function useSortable<T>(
     onDragStart,
     onDrop,
     onDragging,
+    naturalIndex,
+    dataIds,
     disableLayoutAnimation = false,
   } = options;
+
+  // When naturalIndex+dataIds are provided, items render in normal flex flow
+  // and use transform: translateY for repositioning. Otherwise legacy absolute mode.
+  const useFlexFlow = naturalIndex !== undefined && dataIds !== undefined;
 
   // Effective item height for fixed mode calculations
   const effectiveItemHeight = itemHeight || estimatedItemHeight;
@@ -500,6 +520,31 @@ export function useSortable<T>(
 
   const animatedStyle = useAnimatedStyle(() => {
     "worklet";
+
+    if (useFlexFlow && dataIds && naturalIndex !== undefined) {
+      // Compute the item's natural cumulative Y based on data order, so we can
+      // express its current logical top as a translation from that origin.
+      let naturalY = 0;
+      if (isDynamicHeight && itemHeights) {
+        const ids = dataIds.value;
+        const heights = itemHeights.value;
+        for (let i = 0; i < naturalIndex && i < ids.length; i++) {
+          const heightValue = heights[ids[i]];
+          naturalY += heightValue !== undefined ? heightValue : estimatedItemHeight;
+        }
+      } else {
+        naturalY = naturalIndex * effectiveItemHeight;
+      }
+
+      return {
+        transform: [{ translateY: top.value - naturalY }],
+        zIndex: movingSV.value ? 1 : 0,
+        shadowColor: "black",
+        shadowOpacity: withSpring(movingSV.value ? 0.2 : 0),
+        shadowRadius: 10,
+      };
+    }
+
     return {
       position: "absolute",
       left: 0,
@@ -510,7 +555,7 @@ export function useSortable<T>(
       shadowOpacity: withSpring(movingSV.value ? 0.2 : 0),
       shadowRadius: 10,
     };
-  }, [movingSV]);
+  }, [movingSV, useFlexFlow, dataIds, naturalIndex, isDynamicHeight, itemHeights, effectiveItemHeight, estimatedItemHeight]);
 
   return {
     animatedStyle,
