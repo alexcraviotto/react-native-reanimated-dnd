@@ -254,16 +254,20 @@ export function findPositionForY(
     idsByPosition[positions[id]] = id;
   }
 
-  // Walk positions in order, accumulating heights to find which slot positionY falls into
+  // Use the MIDPOINT of each item as the swap threshold so two items with
+  // very different heights don't oscillate (swap → undo → swap...) when the
+  // dragged item hovers around their shared boundary.
   let cumY = 0;
   let result = 0;
   for (let i = 0; i < count; i++) {
     const itemId = idsByPosition[i];
     if (itemId !== undefined) {
-      if (positionY >= cumY) {
+      const h = itemHeights[itemId] ?? estimatedHeight;
+      const midpoint = cumY + h / 2;
+      if (positionY >= midpoint) {
         result = i;
       }
-      cumY += itemHeights[itemId] ?? estimatedHeight;
+      cumY += h;
     }
   }
 
