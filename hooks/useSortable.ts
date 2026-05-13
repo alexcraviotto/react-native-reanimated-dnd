@@ -152,6 +152,17 @@ export interface UseSortableOptions<T> {
    */
   dataIds?: SharedValue<string[]>;
   /**
+   * Shared boolean indicating whether ANY item in the list is currently being
+   * dragged. When provided, the resting reposition animation is forced ON while
+   * a drag is in progress (so the other items animate smoothly to make space)
+   * even if `disableLayoutAnimation` is true.
+   *
+   * Used in conjunction with `disableLayoutAnimation` to skip the idle
+   * reposition spring (e.g. on mount or focus) while keeping the in-drag
+   * shifting animation.
+   */
+  isAnyDragging?: SharedValue<boolean>;
+  /**
    * When true, the spring animation that runs when items reposition at rest
    * (e.g. after height/position changes outside of a drag) is skipped and the
    * item snaps to its new top instantly. The drag-time animations (during
@@ -169,6 +180,18 @@ export interface UseSortableReturn {
   isMoving: boolean;
   hasHandle: boolean;
   registerHandle: (registered: boolean) => void;
+}
+
+/**
+ * Defers clearing the `isAnyDragging` flag so siblings can still spring into
+ * their final resting positions for a brief window after the user releases.
+ */
+function releaseAnyDraggingAfterDelay(
+  sharedValue: SharedValue<boolean>
+): void {
+  setTimeout(() => {
+    sharedValue.value = false;
+  }, 300);
 }
 
 /**
@@ -207,6 +230,7 @@ export function useSortable<T>(
     onDragging,
     naturalIndex,
     dataIds,
+    isAnyDragging,
     disableLayoutAnimation = false,
   } = options;
 
@@ -266,10 +290,12 @@ export function useSortable<T>(
     },
     (newTop, oldTop) => {
       if (oldTop !== null && newTop !== oldTop && !movingSV.value) {
-        top.value = disableLayoutAnimation ? newTop : withSpring(newTop);
+        const dragInProgress = isAnyDragging?.value ?? false;
+        const shouldAnimate = !disableLayoutAnimation || dragInProgress;
+        top.value = shouldAnimate ? withSpring(newTop) : newTop;
       }
     },
-    [isDynamicHeight, itemHeights, positions, id, effectiveItemHeight, estimatedItemHeight, movingSV, disableLayoutAnimation]
+    [isDynamicHeight, itemHeights, positions, id, effectiveItemHeight, estimatedItemHeight, movingSV, disableLayoutAnimation, isAnyDragging]
   );
 
   // === Position change callback (onMove) ===
@@ -471,6 +497,9 @@ export function useSortable<T>(
 
         positionY.value = initialItemContentY.value;
         movingSV.value = true;
+        if (isAnyDragging) {
+          isAnyDragging.value = true;
+        }
         scheduleOnRN(setIsMoving, true);
 
         if (onDragStart) {
@@ -502,6 +531,12 @@ export function useSortable<T>(
         top.value = withTiming(finishPosition);
         movingSV.value = false;
         scheduleOnRN(setIsMoving, false);
+
+        if (isAnyDragging) {
+          // Keep flag true briefly so siblings still spring into their final
+          // resting positions after we release the drag.
+          scheduleOnRN(releaseAnyDraggingAfterDelay, isAnyDragging);
+        }
 
         if (onDrop) {
           const positionsCopy = { ...positions.value };

@@ -127,6 +127,7 @@ export interface SortableItemProps<T> {
     onDraggingHorizontal?: (id: string, overItemId: string | null, xPosition: number) => void;
     naturalIndex?: number;
     dataIds?: SharedValue<string[]>;
+    isAnyDragging?: SharedValue<boolean>;
     disableLayoutAnimation?: boolean;
 }
 export interface SortableProps<TData extends SortableData> {

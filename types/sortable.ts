@@ -592,6 +592,9 @@ export interface SortableItemProps<T> {
   /** Data IDs in their natural order (forwarded to useSortable). */
   dataIds?: SharedValue<string[]>;
 
+  /** Shared flag — true while any item in the list is being dragged. */
+  isAnyDragging?: SharedValue<boolean>;
+
   /**
    * When true, the spring animation that runs when items reposition at rest
    * (e.g. after height/position changes outside of a drag) is skipped and the

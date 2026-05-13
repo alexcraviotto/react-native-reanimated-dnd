@@ -97,6 +97,7 @@ function VerticalSortableItemInner<T>({
   onDragging,
   naturalIndex,
   dataIds,
+  isAnyDragging,
   disableLayoutAnimation,
 }: VerticalSortableItemInnerProps<T>) {
   const { animatedStyle, panGestureHandler, handlePanGestureHandler, registerHandle } = useSortable<T>({
@@ -116,6 +117,7 @@ function VerticalSortableItemInner<T>({
     onDragging,
     naturalIndex,
     dataIds,
+    isAnyDragging,
     disableLayoutAnimation,
   });
 
