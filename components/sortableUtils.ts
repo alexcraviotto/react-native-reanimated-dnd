@@ -254,21 +254,16 @@ export function findPositionForY(
     idsByPosition[positions[id]] = id;
   }
 
-  // Walk positions in order, using each item's midpoint as the swap threshold.
-  // Midpoint-based detection is stable: once a swap happens, the threshold to
-  // swap back is on the other half of the now-shifted neighbour, so the user
-  // can't fall into an oscillation loop with large height differences.
+  // Walk positions in order, accumulating heights to find which slot positionY falls into
   let cumY = 0;
   let result = 0;
   for (let i = 0; i < count; i++) {
     const itemId = idsByPosition[i];
     if (itemId !== undefined) {
-      const h = itemHeights[itemId] ?? estimatedHeight;
-      const midpoint = cumY + h / 2;
-      if (positionY >= midpoint) {
+      if (positionY >= cumY) {
         result = i;
       }
-      cumY += h;
+      cumY += itemHeights[itemId] ?? estimatedHeight;
     }
   }
 
