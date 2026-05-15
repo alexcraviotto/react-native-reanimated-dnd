@@ -585,8 +585,29 @@ export function useSortable<T>(
         naturalY = naturalIndex * effectiveItemHeight;
       }
 
+      // For visual Y:
+      //  - while THIS item is being dragged, follow the spring/timing `top.value`
+      //  - while ANY drag is in progress, also use `top.value` so siblings spring
+      //    smoothly into place
+      //  - otherwise derive from positions+heights in the SAME tick as naturalY
+      //    so they update atomically (no 1-frame flicker via the reaction)
+      const dragActive = movingSV.value || (isAnyDragging?.value ?? false);
+      let visualY: number;
+      if (dragActive) {
+        visualY = top.value;
+      } else if (isDynamicHeight && itemHeights) {
+        visualY = getItemCumulativeY(
+          id,
+          positions.value,
+          itemHeights.value,
+          estimatedItemHeight
+        );
+      } else {
+        visualY = (positions.value[id] ?? 0) * effectiveItemHeight;
+      }
+
       return {
-        transform: [{ translateY: top.value - naturalY }],
+        transform: [{ translateY: visualY - naturalY }],
         zIndex: movingSV.value ? 1 : 0,
         shadowColor: "black",
         shadowOpacity: withSpring(movingSV.value ? 0.2 : 0),
@@ -604,7 +625,7 @@ export function useSortable<T>(
       shadowOpacity: withSpring(movingSV.value ? 0.2 : 0),
       shadowRadius: 10,
     };
-  }, [movingSV, useFlexFlow, dataIds, naturalIndex, isDynamicHeight, itemHeights, effectiveItemHeight, estimatedItemHeight]);
+  }, [movingSV, useFlexFlow, dataIds, naturalIndex, isDynamicHeight, itemHeights, positions, id, effectiveItemHeight, estimatedItemHeight, isAnyDragging]);
 
   return {
     animatedStyle,
