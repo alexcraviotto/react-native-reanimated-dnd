@@ -1,8 +1,24 @@
 import { StyleProp, ViewStyle } from "react-native";
 import { GestureType } from "react-native-gesture-handler";
-import { SharedValue } from "react-native-reanimated";
+import { AnimatedRef, SharedValue } from "react-native-reanimated";
 import { DropProviderRef } from "../types/context";
 import { ReactNode } from "react";
+
+/**
+ * Configuration for using a Sortable inside an external ScrollView/FlatList
+ * owned by the parent. When provided, the Sortable will not render its own
+ * scroll container; instead it reads scroll position from the parent's
+ * shared value and triggers `scrollTo` on the parent's animated ref during
+ * drag-induced auto-scroll.
+ */
+export interface ExternalScrollConfig {
+  /** Animated ref of the parent scroll view (from `useAnimatedRef`). */
+  scrollableRef: AnimatedRef<any>;
+  /** Shared value mirroring the parent scroll view's `contentOffset.y`. */
+  scrollY: SharedValue<number>;
+  /** Visible viewport height (in pixels) of the parent scroll view. */
+  viewportHeight: number;
+}
 
 /**
  * Base interface requiring an ID property for sortable data items.
@@ -673,6 +689,16 @@ export interface SortableProps<TData extends SortableData> {
    * @default false
    */
   disableLayoutAnimation?: boolean;
+
+  /**
+   * When provided, the Sortable will not render its own scroll container and
+   * will instead participate in the parent ScrollView's scrolling, including
+   * auto-scrolling the parent while a drag is near its viewport edges.
+   *
+   * Implies `useFlatList=false` semantics — items are laid out in a plain
+   * sized View, positioned absolutely as before.
+   */
+  externalScroll?: ExternalScrollConfig;
 }
 
 /**
@@ -741,6 +767,13 @@ export interface SortableRenderItemProps<TData extends SortableData> {
 
   /** Forwarded from Sortable to skip the resting reposition spring animation. */
   disableLayoutAnimation?: boolean;
+
+  /**
+   * Forwarded viewport height used for auto-scroll edge detection. Comes from
+   * the Sortable's own measured size, or from `externalScroll.viewportHeight`
+   * when running inside a parent ScrollView.
+   */
+  containerHeight?: number;
 }
 
 export interface SortableContextValue {

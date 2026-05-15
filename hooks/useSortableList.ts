@@ -10,7 +10,7 @@ import {
   listToObject,
   resolveItemHeight,
 } from "../components/sortableUtils";
-import { ScrollDirection } from "../types/sortable";
+import { ExternalScrollConfig, ScrollDirection } from "../types/sortable";
 import { DropProviderRef } from "../types/context";
 
 export interface UseSortableListOptions<TData> {
@@ -20,6 +20,7 @@ export interface UseSortableListOptions<TData> {
   estimatedItemHeight?: number;
   onHeightsMeasured?: (heights: { [id: string]: number }) => void;
   itemKeyExtractor?: (item: TData, index: number) => string;
+  externalScroll?: ExternalScrollConfig;
 }
 
 export interface UseSortableListReturn<TData> {
@@ -34,6 +35,8 @@ export interface UseSortableListReturn<TData> {
   isDynamicHeight: boolean;
   itemHeights: any;
   scheduleHeightUpdate?: (id: string, height: number) => void;
+  isExternalScroll: boolean;
+  contentOffsetY: any;
   getItemProps: (
     item: TData,
     index: number
@@ -48,6 +51,7 @@ export interface UseSortableListReturn<TData> {
     estimatedItemHeight: number;
     itemHeights?: any;
     scheduleHeightUpdate?: (id: string, height: number) => void;
+    containerHeight?: number;
   };
 }
 
@@ -79,7 +83,10 @@ export function useSortableList<TData extends { id: string }>(
     estimatedItemHeight = 60,
     onHeightsMeasured,
     itemKeyExtractor = (item) => item.id,
+    externalScroll,
   } = options;
+
+  const isExternalScroll = externalScroll !== undefined;
 
   // Determine if we're in dynamic height mode:
   // - explicitly enabled, OR
@@ -117,9 +124,19 @@ export function useSortableList<TData extends { id: string }>(
 
   // Set up shared values
   const positions = useSharedValue(listToObject(data));
-  const scrollY = useSharedValue(0);
+  // In external scroll mode, scrollY is owned by the parent; we mirror it locally
+  // for use as `lowerBound` in items (after subtracting the sortable's offset).
+  const localScrollY = useSharedValue(0);
+  const scrollY = externalScroll ? externalScroll.scrollY : localScrollY;
+  const lowerBoundSV = useSharedValue(0);
   const autoScroll = useSharedValue(ScrollDirection.None);
-  const scrollViewRef = useAnimatedRef();
+  const internalScrollViewRef = useAnimatedRef();
+  const scrollViewRef = externalScroll
+    ? externalScroll.scrollableRef
+    : internalScrollViewRef;
+  // Y position of the Sortable's top within the parent scroll content.
+  // 0 when not in external mode. The Sortable component measures and writes this.
+  const contentOffsetY = useSharedValue(0);
   const dropProviderRef = useRef<DropProviderRef | null>(null);
 
   // Dynamic height shared values — initialized with estimated heights
@@ -208,17 +225,45 @@ export function useSortableList<TData extends { id: string }>(
     [data, itemKeyExtractor, estimatedItemHeight, onHeightsMeasured]
   );
 
-  // Scrolling synchronization
+  // === Scroll synchronization ===
+  // `lowerBoundSV` is the sortable-local "top of viewport" position used by
+  // items for edge detection. In internal mode it mirrors the internal scrollY
+  // 1:1. In external mode it equals `parentScrollY - contentOffsetY`.
   useAnimatedReaction(
-    () => scrollY.value,
-    (scrolling) => {
-      scrollTo(scrollViewRef, 0, scrolling, false);
+    () =>
+      isExternalScroll
+        ? scrollY.value - contentOffsetY.value
+        : null,
+    (next, prev) => {
+      if (next !== null && next !== prev) {
+        lowerBoundSV.value = next;
+      }
+    }
+  );
+  // Programmatic scroll only runs when a drag is actively auto-scrolling
+  // (autoScroll !== None). Triggering scrollTo on every user-driven scroll
+  // would cancel native momentum / flick gestures.
+  useAnimatedReaction(
+    () => {
+      if (autoScroll.value === ScrollDirection.None) return null;
+      return lowerBoundSV.value;
+    },
+    (lb) => {
+      if (lb === null) return;
+      if (isExternalScroll) {
+        scrollTo(scrollViewRef, 0, lb + contentOffsetY.value, false);
+      } else {
+        scrollTo(scrollViewRef, 0, lb, false);
+      }
     }
   );
 
-  // Handle scroll events
+  // Handle scroll events (internal mode only — parent handles its own onScroll)
   const handleScroll = useAnimatedScrollHandler((event) => {
-    scrollY.value = event.contentOffset.y;
+    if (!isExternalScroll) {
+      lowerBoundSV.value = event.contentOffset.y;
+      localScrollY.value = event.contentOffset.y;
+    }
   });
 
   const handleScrollEnd = useCallback(() => {
@@ -238,13 +283,14 @@ export function useSortableList<TData extends { id: string }>(
       : dynamicContentHeight;
 
   // Helper to get props for each sortable item
+  const containerHeight = externalScroll?.viewportHeight;
   const getItemProps = useCallback(
     (item: TData, index: number) => {
       const id = itemKeyExtractor(item, index);
       return {
         id,
         positions,
-        lowerBound: scrollY,
+        lowerBound: lowerBoundSV,
         autoScrollDirection: autoScroll,
         itemsCount: data.length,
         itemHeight: typeof itemHeight === "number" ? itemHeight : undefined,
@@ -252,6 +298,7 @@ export function useSortableList<TData extends { id: string }>(
         estimatedItemHeight,
         itemHeights: isDynamicHeight ? itemHeightsSV : undefined,
         scheduleHeightUpdate: needsMeasurement ? scheduleHeightUpdate : undefined,
+        containerHeight,
       };
     },
     [
@@ -262,10 +309,11 @@ export function useSortableList<TData extends { id: string }>(
       needsMeasurement,
       itemKeyExtractor,
       positions,
-      scrollY,
+      lowerBoundSV,
       autoScroll,
       itemHeightsSV,
       scheduleHeightUpdate,
+      containerHeight,
     ]
   );
 
@@ -281,6 +329,8 @@ export function useSortableList<TData extends { id: string }>(
     isDynamicHeight,
     itemHeights: itemHeightsSV,
     scheduleHeightUpdate: needsMeasurement ? scheduleHeightUpdate : undefined,
+    isExternalScroll,
+    contentOffsetY,
     getItemProps,
   };
 }

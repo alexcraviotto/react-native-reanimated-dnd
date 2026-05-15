@@ -1,8 +1,13 @@
 import { StyleProp, ViewStyle } from "react-native";
 import { GestureType } from "react-native-gesture-handler";
-import { SharedValue } from "react-native-reanimated";
+import { AnimatedRef, SharedValue } from "react-native-reanimated";
 import { DropProviderRef } from "../types/context";
 import { ReactNode } from "react";
+export interface ExternalScrollConfig {
+    scrollableRef: AnimatedRef<any>;
+    scrollY: SharedValue<number>;
+    viewportHeight: number;
+}
 export interface SortableData {
     id: string;
 }
@@ -148,6 +153,7 @@ export interface SortableProps<TData extends SortableData> {
     itemKeyExtractor?: (item: TData, index: number) => string;
     useFlatList?: boolean;
     disableLayoutAnimation?: boolean;
+    externalScroll?: ExternalScrollConfig;
 }
 export interface SortableRenderItemProps<TData extends SortableData> {
     item: TData;
@@ -173,6 +179,7 @@ export interface SortableRenderItemProps<TData extends SortableData> {
     }>;
     scheduleHeightUpdate?: (id: string, height: number) => void;
     disableLayoutAnimation?: boolean;
+    containerHeight?: number;
 }
 export interface SortableContextValue {
     panGestureHandler: GestureType;

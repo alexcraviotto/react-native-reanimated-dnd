@@ -369,8 +369,22 @@ export function useSortable<T>(
         }
       }
 
-      // Update visual position
-      top.value = currentY;
+      // Clamp visual position to the sortable's own bounds so a dragged
+      // item never visually escapes its section.
+      let maxTop: number;
+      if (isDynamicHeight && itemHeights) {
+        let total = 0;
+        const heights = itemHeights.value;
+        const posObj = positions.value;
+        for (const k in posObj) {
+          total += heights[k] ?? estimatedItemHeight;
+        }
+        const thisHeight = heights[id] ?? estimatedItemHeight;
+        maxTop = Math.max(0, total - thisHeight);
+      } else {
+        maxTop = Math.max(0, (itemsCount - 1) * effectiveItemHeight);
+      }
+      top.value = Math.max(0, Math.min(currentY, maxTop));
 
       // Update logical positions
       if (isDynamicHeight) {

@@ -1,6 +1,10 @@
 import React, { memo, useCallback, useMemo } from "react";
-import { StyleSheet } from "react-native";
-import Animated from "react-native-reanimated";
+import { LayoutChangeEvent, StyleSheet, View } from "react-native";
+import Animated, {
+  measure,
+  runOnUI,
+  useAnimatedRef,
+} from "react-native-reanimated";
 import {
   GestureHandlerRootView,
   FlatList,
@@ -53,6 +57,7 @@ function SortableComponent<TData extends { id: string }>({
   itemKeyExtractor = (item) => item.id,
   useFlatList = true,
   disableLayoutAnimation,
+  externalScroll,
 }: SortableProps<TData>) {
   // Determine if dynamic height mode applies
   const isDynamicHeightMode = useMemo(() => {
@@ -109,6 +114,7 @@ function SortableComponent<TData extends { id: string }>({
       itemKeyExtractor={itemKeyExtractor}
       useFlatList={useFlatList}
       disableLayoutAnimation={disableLayoutAnimation}
+      externalScroll={externalScroll}
     />
   );
 }
@@ -126,6 +132,7 @@ function VerticalSortableContent<TData extends { id: string }>({
   itemKeyExtractor,
   useFlatList,
   disableLayoutAnimation,
+  externalScroll,
 }: SortableProps<TData>) {
   const {
     scrollViewRef,
@@ -133,6 +140,8 @@ function VerticalSortableContent<TData extends { id: string }>({
     handleScroll,
     handleScrollEnd,
     contentHeight,
+    isExternalScroll,
+    contentOffsetY,
     getItemProps,
   } = useSortableList<TData>({
     data,
@@ -141,7 +150,30 @@ function VerticalSortableContent<TData extends { id: string }>({
     estimatedItemHeight,
     onHeightsMeasured,
     itemKeyExtractor,
+    externalScroll,
   });
+
+  // Ref to the external-mode wrapper View, used to measure its position
+  // within the parent scroll content.
+  const externalWrapperRef = useAnimatedRef<View>();
+  const remeasureOffset = useCallback(() => {
+    if (!externalScroll) return;
+    const parentRef = externalScroll.scrollableRef;
+    const parentScrollY = externalScroll.scrollY;
+    runOnUI(() => {
+      "worklet";
+      const local = measure(externalWrapperRef);
+      const parent = measure(parentRef);
+      if (local !== null && parent !== null) {
+        contentOffsetY.value =
+          local.pageY - parent.pageY + parentScrollY.value;
+      }
+    })();
+  }, [externalScroll, externalWrapperRef, contentOffsetY]);
+  const handleExternalLayout = useCallback(
+    (_e: LayoutChangeEvent) => remeasureOffset(),
+    [remeasureOffset]
+  );
 
   const memoizedVerticalRenderItem = useCallback(
     ({ item, index }: { item: unknown; index: number }) => {
@@ -157,6 +189,36 @@ function VerticalSortableContent<TData extends { id: string }>({
     },
     [getItemProps, renderItem]
   );
+
+  if (isExternalScroll) {
+    return (
+      <GestureHandlerRootView style={styles.flex}>
+        <DropProvider ref={dropProviderRef}>
+          <View
+            ref={externalWrapperRef}
+            onLayout={handleExternalLayout}
+            style={[
+              { height: contentHeight },
+              style as any,
+              contentContainerStyle as any,
+            ]}
+          >
+            {data.map((item, index) => {
+              const itemProps = getItemProps(item, index);
+              const sortableItemProps: SortableRenderItemProps<TData> = {
+                item,
+                index,
+                direction: SortableDirection.Vertical,
+                disableLayoutAnimation,
+                ...itemProps,
+              };
+              return renderItem(sortableItemProps);
+            })}
+          </View>
+        </DropProvider>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={styles.flex}>

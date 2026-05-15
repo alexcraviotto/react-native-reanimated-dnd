@@ -1,3 +1,4 @@
+import { ExternalScrollConfig } from "../types/sortable";
 import { DropProviderRef } from "../types/context";
 export interface UseSortableListOptions<TData> {
     data: TData[];
@@ -8,6 +9,7 @@ export interface UseSortableListOptions<TData> {
         [id: string]: number;
     }) => void;
     itemKeyExtractor?: (item: TData, index: number) => string;
+    externalScroll?: ExternalScrollConfig;
 }
 export interface UseSortableListReturn<TData> {
     positions: any;
@@ -21,6 +23,8 @@ export interface UseSortableListReturn<TData> {
     isDynamicHeight: boolean;
     itemHeights: any;
     scheduleHeightUpdate?: (id: string, height: number) => void;
+    isExternalScroll: boolean;
+    contentOffsetY: any;
     getItemProps: (item: TData, index: number) => {
         id: string;
         positions: any;
@@ -32,6 +36,7 @@ export interface UseSortableListReturn<TData> {
         estimatedItemHeight: number;
         itemHeights?: any;
         scheduleHeightUpdate?: (id: string, height: number) => void;
+        containerHeight?: number;
     };
 }
 export declare function useSortableList<TData extends {
